@@ -1,0 +1,4 @@
+resources:
+- hardwareprofiles
+- inventory
+- ocp-4.22

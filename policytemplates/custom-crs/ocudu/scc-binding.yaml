@@ -1,0 +1,15 @@
+# Grants privileged SCC to ran-du service account.
+# Required for DPDK/VFIO workloads that need hugepages, host devices, and SR-IOV VFs.
+# Initial lab only — tighten to a custom SCC for production.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ran-du-privileged
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+  - kind: ServiceAccount
+    name: ran-du
+    namespace: ran

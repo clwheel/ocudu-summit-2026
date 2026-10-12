@@ -1,0 +1,6 @@
+generators:
+- sno-ocudu/sno-ocudu-v4-22.yaml
+
+resources:
+- sno-ocudu/ns.yaml
+- sno-ocudu/msc-binding.yaml

@@ -1,0 +1,39 @@
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: thanos
+spec:
+  generateBucketName: thanos
+  storageClassName: openshift-storage.noobaa.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: thanos-object-storage
+  namespace: open-cluster-management-observability
+type: Opaque
+stringData:
+  thanos.yaml: |
+    type: s3
+    config:
+      bucket: <from ObjectBucketClaim>
+      endpoint: s3.openshift-storage.svc
+      insecure: true
+      access_key: <from ObjectBucketClaim>
+      secret_key: <from ObjectBucketClaim>
+---
+apiVersion: observability.open-cluster-management.io/v1beta2
+kind: MultiClusterObservability
+metadata:
+  name: observability
+  namespace: "open-cluster-management-observability"
+spec:
+  availabilityConfig: High
+  observabilityAddonSpec:
+    enableMetrics: true
+    interval: 60
+  storageConfig:
+    metricObjectStorage:
+      name: thanos-object-storage
+      key: thanos.yaml

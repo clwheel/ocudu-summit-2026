@@ -1,0 +1,7 @@
+resources:
+- common.yaml
+- location.yaml
+- ocloudsite.yaml
+- resourcepool.yaml
+- master-0-sno1.yaml
+- master-0-sno2.yaml

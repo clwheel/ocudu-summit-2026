@@ -1,0 +1,12 @@
+---
+# Location CR - defines a physical/logical place
+# Referenced by OCloudSite.spec.globalLocationName
+apiVersion: ocloud.openshift.io/v1alpha1
+kind: Location
+metadata:
+  # This name is used as the globalLocationId (unique identifier)
+  name: lab
+  namespace: oran-o2ims
+spec:
+  description: "OCUDU Summit Lab"
+  address: "Earth"

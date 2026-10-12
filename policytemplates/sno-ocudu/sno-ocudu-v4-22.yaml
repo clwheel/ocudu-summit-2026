@@ -1,0 +1,127 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: sno-ocudu-v4-22
+policyDefaults:
+  namespace: ztp-sno-ran-du-v4-22-14
+  placement:
+    # These labels must match the labels set for the ManagedCluster either through the ProvisioningRequest
+    # or the ClusterInstance ConfigMap.
+    labelSelector:
+      cluster-version: "v4.22"
+      sno-ocudu-policy: "v1"
+  remediationAction: enforce
+  severity: low
+  namespaceSelector:
+    exclude:
+      - kube-*
+    include:
+      - '*'
+  evaluationInterval:
+    compliant: 5m
+    noncompliant: 10s
+  orderPolicies: true
+policies:
+- name: v1-subscriptions-policy
+  manifests:
+    - path: source-crs/sriov-operator/SriovSubscriptionNS.yaml
+    - path: source-crs/sriov-operator/SriovSubscriptionOperGroup.yaml
+    - path: source-crs/sriov-operator/SriovSubscription.yaml
+      patches:
+      - spec:
+          source: redhat-operators
+          installPlanApproval:
+            '{{hub $configMap:=(lookup "v1" "ConfigMap" "" (printf "%s-pg" .ManagedClusterName)) hub}}{{hub dig "data" "install-plan-approval" "Manual" $configMap hub}}'
+    - path: source-crs/ptp-operator/PtpSubscriptionNS.yaml
+    - path: source-crs/ptp-operator/PtpSubscriptionOperGroup.yaml
+    - path: source-crs/ptp-operator/PtpSubscription.yaml
+      patches:
+      - spec:
+          source: redhat-operators
+          installPlanApproval:
+            '{{hub $configMap:=(lookup "v1" "ConfigMap" "" (printf "%s-pg" .ManagedClusterName)) hub}}{{hub dig "data" "install-plan-approval" "Manual" $configMap hub}}'
+    - path: custom-crs/ocudu/ran-namespace.yaml
+    - path: custom-crs/ocudu/scc-binding.yaml
+    - path: custom-crs/ocudu/service-account.yaml
+- name: v1-perf-configuration-policy
+  manifests:
+    - path: source-crs/node-tuning-operator/x86_64/PerformanceProfile-SetSelector.yaml
+      patches:
+      - metadata:
+          name: openshift-node-performance-profile
+          annotations:
+            kubeletconfig.experimental: '{"allowedUnsafeSysctls": ["net.ipv4.ip_forward"], "systemReserved": {"memory": "11Gi"}}'
+        spec:
+          additionalKernelArgs:
+            - "rcupdate.rcu_normal_after_boot=0"
+            - "efi=runtime"
+            - "vfio_pci.enable_sriov=1"
+            - "vfio_pci.disable_idle_d3=1"
+          cpu:
+            # These must be tailored for the specific hardware platform
+            isolated: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "cpu-isolated" hub}}'
+            reserved: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "cpu-reserved" hub}}'
+          hugepages:
+            defaultHugepagesSize: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "hugepages-default" hub}}'
+            pages:
+              - size: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "hugepages-size" hub}}'
+                count: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "hugepages-count" | toInt hub}}'
+          numa:
+            topologyPolicy: "single-numa-node"
+          realTimeKernel:
+            enabled: true
+          machineConfigPoolSelector:
+            pools.operator.machineconfiguration.openshift.io/master: ""
+          net:
+            userLevelNetworking: true
+          nodeSelector:
+            node-role.kubernetes.io/master: ""
+- name: v1-sriov-configuration-policy
+  manifests:
+    - path: source-crs/sriov-operator/SriovOperatorConfig-SetSelector.yaml
+      patches:
+      - spec:
+          configDaemonNodeSelector:
+            node-role.kubernetes.io/master: ""
+          enableInjector: true
+          enableOperatorWebhook: true
+    - path: source-crs/sriov-operator/SriovNetworkNodePolicy-SetSelector.yaml
+      patches:
+      - metadata:
+          name: sriov-nnp-du-fh
+        spec:
+          deviceType: vfio-pci
+          isRdma: false
+          mtu: 9600
+          nicSelector:
+            pfNames: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "sriov-network-pfNames-1" | toLiteral hub}}'
+          nodeSelector:
+            node-role.kubernetes.io/master: ""
+          numVfs: 16
+          priority: 99
+          resourceName: ran_fh_vfio
+    - path: source-crs/sriov-operator/SriovNetwork.yaml
+      patches:
+      - metadata:
+          name: ran-fronthaul-vfio
+          namespace: openshift-sriov-network-operator
+        spec:
+          networkNamespace: ran
+          resourceName: ran_fh_vfio
+          vlan: '{{hub fromConfigMap "" (printf "%s-pg" .ManagedClusterName) "sriov-network-vlan-1" | toInt hub}}'
+
+- name: v1-ptp-configuration-policy
+  manifests:
+    - path: source-crs/ptp-operator/PtpOperatorConfigForEvent.yaml
+      patches:
+      - spec: 
+          daemonNodeSelector:
+            $patch: replace
+            node-role.kubernetes.io/master: ""
+    - path: custom-crs/ptp/PtpConfig.yaml
+- name: v1-sctp-policy
+  manifests:
+    - path: source-crs/machine-config/MachineConfigSctp.yaml
+- name: v1-hostpath-policy
+  manifests:
+    - path: custom-crs/machineconfig/machineconfig-hostpath-dirs.yaml

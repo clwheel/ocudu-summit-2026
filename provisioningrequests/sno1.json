@@ -1,0 +1,109 @@
+{
+  "provisioningRequestId": "ef4f0dc6-9640-4c68-81d4-ff327b35d4dc",
+  "name": "sno1",
+  "description": "Provisioning request for setting up a Single Node OCP (SNO) cluster",
+  "templateName": "sno-ran-du",
+  "templateVersion": "v4-22-14-1",
+  "templateParameters": {
+    "nodeClusterName": "sno1",
+    "oCloudSiteId": "demo",
+    "hwMgmtParameters": {
+      "nodeGroupData": [
+        {
+          "name": "master",
+          "role": "master",
+          "hwProfile": "hpe-dl380-bios-v3.70-bmc-v3.21",
+          "resourceSelector": {
+            "resourceselector.clcm.openshift.io/server-id": "master-0-sno1"
+          }
+        }
+      ]
+    },
+    "policyTemplateParameters": {
+      "sriov-network-pfNames-1": "[\"ens4f1#0-7\"]",
+      "sriov-network-vlan-1": "0",
+      "cpu-reserved": "0-1,48-49",
+      "cpu-isolated": "2-47,50-95",
+      "hugepages-default": "1G",
+      "hugepages-size": "1G",
+      "hugepages-count": "32",
+      "install-plan-approval": "Automatic"
+    },
+    "clusterInstanceParameters": {
+      "additionalNTPSources": [
+        "192.168.123.40"
+      ],
+      "baseDomain": "demo.lab",
+      "clusterName": "sno1",
+      "extraLabels": {
+        "ManagedCluster": {
+          "cluster-version": "v4.22",
+          "sno-ocudu-policy": "v1"
+        }
+      },
+      "machineNetwork": [
+        {
+          "cidr": "192.168.123.0/25"
+        }
+      ],
+      "nodes": [
+        {
+          "hostName": "master-0-sno1.demo.lab",
+          "nodeLabels": {
+            "node-role.kubernetes.io/infra": "",
+            "node-role.kubernetes.io/master": ""
+          },
+          "nodeNetwork": {
+            "config": {
+              "dns-resolver": {
+                "config": {
+                  "server": [
+                    "192.168.123.40"
+                  ]
+                }
+              },
+              "interfaces": [
+                {
+                  "ipv4": {
+                    "address": [
+                      {
+                        "ip": "192.168.123.41",
+                        "prefix-length": 25
+                      }
+                    ],
+                    "dhcp": false,
+                    "enabled": true
+                  },
+                  "ipv6": {
+                    "dhcp": false,
+                    "enabled": false
+                  },
+                  "name": "boot-interface",
+                  "type": "ethernet",
+                  "mac-address": "aa:bb:cc:dd:ee:ff",
+                  "identifier": "mac-address"
+                }
+              ],
+              "routes": {
+                "config": [
+                  {
+                    "destination": "0.0.0.0/0",
+                    "next-hop-address": "192.168.123.1",
+                    "next-hop-interface": "boot-interface",
+                    "table-id": 254
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "serviceNetwork": [
+        {
+          "cidr": "172.30.0.0/16"
+        }
+      ],
+      "sshPublicKey": "ssh-rsa xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  }
+}

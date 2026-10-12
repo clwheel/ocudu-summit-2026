@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: policytemplate-defaults-v1
+  namespace: sno-ran-du-v4-22-14
+data:
+  # clusterConfigurationTimeout is optional.
+  # The value should be a duration string
+  # (e.g., "40m" for 40 minutes)
+  # clusterConfigurationTimeout: "40m"
+  policytemplate-defaults: |
+    sriov-network-vlan-1: "0"
+    sriov-network-pfNames-1: '["ens4f1#0-7"]'
+    cpu-reserved: "0-1,48-49"
+    cpu-isolated: "2-47,50-95"
+    hugepages-default: "1G"
+    hugepages-size: "1G"
+    hugepages-count: "32"
+    install-plan-approval: "Automatic"

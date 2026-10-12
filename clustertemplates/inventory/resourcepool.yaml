@@ -1,0 +1,16 @@
+---
+# ResourcePool CR - groups related resources (servers) within an O-Cloud Site
+# Referenced by BareMetalHost label resourcePoolName
+apiVersion: ocloud.openshift.io/v1alpha1
+kind: ResourcePool
+metadata:
+  # Must match: BareMetalHost label resources.clcm.openshift.io/resourcePoolName
+  name: hpe-dl380-pool
+  namespace: oran-o2ims
+spec:
+  # Must match an existing OCloudSite's metadata.name
+  oCloudSiteName: "demo"
+  description: "Resource pool for HPE DL380 servers"
+  extensions:
+    hardware-profile: "hpe-dl380-bios-v3.70-bmc-v3.21"
+    purpose: "OCUDU"

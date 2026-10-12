@@ -1,0 +1,17 @@
+configMapGenerator:
+- files:
+  - extra-manifest/03-sctp-machine-config-master.yaml
+  - extra-manifest/06-kdump-master.yaml
+  - extra-manifest/07-sriov-related-kernel-args-master.yaml
+  - extra-manifest/99-sync-time-once-master.yaml
+  name: sno-ran-du-extra-manifest-1
+  namespace: sno-ran-du-v4-22-14
+generatorOptions:
+  disableNameSuffixHash: true
+
+resources:
+- sno-ran-du/ns.yaml
+- sno-ran-du/pull-secret.yaml
+- sno-ran-du/clusterinstance-defaults-v1.yaml
+- sno-ran-du/policytemplates-defaults-v1.yaml
+- sno-ran-du/sno-ran-du-v4-22-14-1.yaml

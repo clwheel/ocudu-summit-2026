@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+#
+# MachineConfig: create hostPath directories required by RAN workloads.
+#
+# Directories managed:
+#   /mnt/logs-ocudu-gnb          — gNB log volume (uid/gid 1001, mode 750)
+#   /mnt/data/open5gs-sample-mongodb — open5gs MongoDB data volume (uid/gid 999, mode 770)
+#
+# Applied to: master MachineConfigPool (SNO has only master pool).
+# Trigger: MCO applies on boot via systemd oneshot unit; idempotent.
+# NOTE: Applying this MachineConfig will cause a node reboot on first apply.
+#
+# Kernel modules loaded on boot:
+#   sctp — required by open5gs AMF for N2 (NGAP over SCTP)
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 50-ran-hostpath-dirs
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+        - name: ran-hostpath-dirs.service
+          enabled: true
+          contents: |
+            [Unit]
+            Description=Create hostPath directories for RAN workloads
+            After=local-fs.target
+            Before=kubelet.service
+            ConditionPathExists=!/var/lib/ran-hostpath-dirs.done
+
+            [Service]
+            Type=oneshot
+            RemainAfterExit=yes
+            ExecStart=/bin/bash -c '\
+              set -e; \
+              mkdir -p /mnt/logs-ocudu-gnb; \
+              chown 1001:1001 /mnt/logs-ocudu-gnb; \
+              chmod 750 /mnt/logs-ocudu-gnb; \
+              chcon -t container_file_t /mnt/logs-ocudu-gnb; \
+              mkdir -p /mnt/data/open5gs-sample-mongodb; \
+              chown 999:999 /mnt/data/open5gs-sample-mongodb; \
+              chmod 770 /mnt/data/open5gs-sample-mongodb; \
+              chcon -t container_file_t /mnt/data/open5gs-sample-mongodb; \
+              touch /var/lib/ran-hostpath-dirs.done'
+
+            [Install]
+            WantedBy=multi-user.target

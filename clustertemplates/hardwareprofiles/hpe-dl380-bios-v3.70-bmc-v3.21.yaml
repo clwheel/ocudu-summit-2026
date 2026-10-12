@@ -1,0 +1,15 @@
+apiVersion: clcm.openshift.io/v1alpha1 
+kind: HardwareProfile
+metadata:
+  name: hpe-dl380-bios-v3.70-bmc-v3.21
+  namespace: oran-o2ims 
+spec:
+  bios:
+    attributes:
+      BootMode: Uefi
+  biosFirmware:
+    version: U30 v3.70 (08/19/2026)
+    url: http://192.168.123.40/U30_3.70_08_19_2026.fwpkg
+  bmcFirmware:
+    version: iLO 5 v3.21
+    url: http://192.168.123.40/ilo5_321.fwpkg
