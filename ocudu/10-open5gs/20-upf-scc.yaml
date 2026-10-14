@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+# SCC for the Open5GS UPF running in unprivileged mode
+# (spec.upf.unprivileged: true, open5gs-operator chart 1.0.7 or newer).
+#
+# Replaces the `privileged` SCC binding the UPF otherwise needs with a much
+# narrower one: no privileged mode, only NET_ADMIN — used exclusively by the
+# init container that creates the persistent TUN device, while the main
+# open5gs-upfd container adds no capabilities at all — plus hostPath for the
+# /dev/net/tun mount and the net.ipv4.ip_forward unsafe sysctl.
+#
+# seLinuxContext forces type spc_t (the MCS level is filled in automatically
+# from the namespace's own range) — required on RHCOS to access /dev/net/tun
+# at all: the default container_t domain has no policy allowing chr_file
+# access to devices of type tun_tap_device_t, regardless of capabilities or
+# UID. This is deliberately the only place it is set: partially specifying it
+# on the pod or container (type without the namespace-specific level) fails
+# SCC validation outright.
+#
+# runAsUser is RunAsAny rather than a pinned range because the init container
+# must run as root for CAP_NET_ADMIN to be effective — Kubernetes populates a
+# non-root container's capability bounding set but never its inheritable or
+# ambient set, so a non-root container requesting NET_ADMIN would hold it in
+# the bounding set only — while the main container runs as UID 1001. Both
+# containers validate against the same SCC, so it cannot be pinned to either.
+#
+# net.ipv4.ip_forward must ALSO be allowlisted at the kubelet level (see
+# README.md). Missing either layer fails pod admission, and because admission
+# failures retry in a tight loop, applying one without the other can flood the
+# namespace with failed pod objects within a minute. Apply both together.
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: open5gs-upf-unprivileged
+priority: 10
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: false
+defaultAllowPrivilegeEscalation: false
+allowedCapabilities:
+  - NET_ADMIN
+requiredDropCapabilities:
+  - ALL
+allowHostDirVolumePlugin: true
+allowHostNetwork: false
+allowHostPorts: false
+allowHostPID: false
+allowHostIPC: false
+readOnlyRootFilesystem: false
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+  seLinuxOptions:
+    type: spc_t
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+seccompProfiles:
+  - runtime/default
+allowedUnsafeSysctls:
+  - net.ipv4.ip_forward
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+  - hostPath
+users: []
+groups: []
+---
+# Custom SCCs do not get a matching `use` ClusterRole bootstrapped the way
+# built-in ones do — define it explicitly.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:scc:open5gs-upf-unprivileged
+rules:
+  - apiGroups: ["security.openshift.io"]
+    resources: ["securitycontextconstraints"]
+    resourceNames: ["open5gs-upf-unprivileged"]
+    verbs: ["use"]

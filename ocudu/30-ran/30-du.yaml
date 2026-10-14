@@ -1,0 +1,127 @@
+# DU for the sno2 E2E deployment, driving the Benetel RAN650 over Open
+# Fronthaul (split 7.2) through one vfio VF. Every RU-derived value and its
+# basis is in ../../../ru/benetel-ran650/README.md.
+#
+# Values (Nils, 2026-10-07): OCUDU's RAN650 integration guide
+# (docs.ocudu.org/integrations/radio_units/benetel, tested with RU firmware
+# RAN650_1_v1.4.0); values the guide does not give come from OCUDU's RAN550
+# sample (configs/gnb_ru_ran550_tdd_n78_100mhz_4x2.yml). This RU runs much
+# older firmware (RAN650-1v1.0.4), so the RU side is adjusted to the guide
+# (4x2, PRACH BFP9) and the timing may need the fallback noted below.
+#
+# Do not apply before:
+#   - the operator runs 1.0.3 (guide 2.4): it binds the Du's and CU-UP's
+#     F1-U to their pod IPs and gives the Du peer_port 2151 (finding F4);
+#   - the RU runs the planned config: 3930.00 MHz, mimo_mode 1_2_3_4_4x2,
+#     flexran_prach_workaround disabled (Phase G1,
+#     ../../../ru/benetel-ran650/planned/);
+#   - the sizing below (PROPOSAL) is decided.
+# After the pod starts, read the VF MAC from the init container log and
+# reprogram the RU's DU-MAC registers to it (Phase G3,
+# ../../../ru/benetel-ran650/planned/ru-commands.sh).
+apiVersion: ran.ocudu.org/v1alpha1
+kind: Du
+metadata:
+  name: ocudu-du
+  namespace: ran
+spec:
+  runtime:
+    image:
+      repository: registry.gitlab.com/ocudu/ocudu/images/du-dpdk
+      tag: ubuntu-24.04-avx512-20260930_cb9ca3f2-stable
+    resources:
+      # PROPOSAL (sizing not decided yet). Whole CPUs are required: the init
+      # container refuses to start unless the pod gets exactly this many
+      # exclusive CPUs (static CPU Manager).
+      cpu: "24"
+      memory: 16Gi
+      hugepages1Gi: 4Gi
+    serviceAccount:
+      name: ocudu-ran
+    placement:
+      # Confirmed 2026-10-06 from PerformanceProfile.status.runtimeClass.
+      runtimeClassName: performance-openshift-node-performance-profile
+      podAnnotations:
+        cpu-quota.crio.io: "disable"
+        cpu-load-balancing.crio.io: "disable"
+        irq-load-balancing.crio.io: "disable"
+  observability:
+    logs:
+      type: none # logs go to stdout (decision D6)
+  cellCfg:
+    dlArfcn: 662000 # 3930.000 MHz (decision D9)
+    band: 77
+    channelBandwidthMhz: 100
+    commonScs: 30
+    plmn: "00101"
+    tac: 7
+    # 4x2, as the RAN650 guide recommends ("other parameter combinations are
+    # untested"); the RU's calibration directory is RAN650_n77u_4T2R.
+    nofAntennasDl: 4
+    nofAntennasUl: 2
+    prach:
+      # RAN650 guide.
+      prachConfigIndex: 159
+      prachRootSequenceIndex: 1
+      zeroCorrelationZone: 0
+    ssb:
+      ssbBlockPowerDbm: 0 # RAN650 guide: 0 for the RAN650 (37 dBm Tx)
+    tddUlDlCfg:
+      # DDDDDDDSUU, special slot 6 DL / 4 guard / 4 UL symbols, as on the RU.
+      # The guide names the 7-2 pattern; the numbers are from the RAN550 sample.
+      pattern1:
+        dlUlTxPeriod: 10
+        nofDlSlots: 7
+        nofDlSymbols: 6
+        nofUlSlots: 2
+        nofUlSymbols: 4
+  cells:
+    - name: cell-0
+      cellLocalId: 0
+      du:
+        pci: 1 # RAN550 sample
+  radioUnit:
+    ofh:
+      base:
+        # RAN650 guide (firmware v1.4.0). If the DU logs late or early OFH
+        # packets with this older firmware, fall back to the RAN550 sample:
+        # C-plane DL/UL 286-535, U-plane 80-390, Ta4 25-500.
+        t1aMaxCpDlMicroseconds: 470
+        t1aMinCpDlMicroseconds: 419
+        t1aMaxCpUlMicroseconds: 336
+        t1aMinCpUlMicroseconds: 285
+        t1aMaxUpMicroseconds: 345
+        t1aMinUpMicroseconds: 294
+        ta4MaxMicroseconds: 200
+        ta4MinMicroseconds: 0
+        prachControlPlaneEnabled: true
+        compressionMethodUl: bfp
+        compressionBitwidthUl: 9
+        compressionMethodDl: bfp
+        compressionBitwidthDl: 9
+        # RAN650 guide. Needs flexran_prach_workaround=disabled on the RU; with
+        # the workaround on (as today) this firmware sends PRACH uncompressed.
+        compressionMethodPrach: bfp
+        compressionBitwidthPrach: 9
+        enableUlStaticCompressionHeader: false
+        enableDlStaticCompressionHeader: false
+        # RAN650 guide, with the RU's downlink_scaling at 0 dB (as today).
+        iqScaling:
+          standard:
+            ruReferenceLevelDbfs: "-12"
+            subcarrierRmsBackoffDb: "0"
+      cells:
+        - sriovNetwork:
+            resourceName: openshift.io/ran_fh_vfio
+          ruMacAddr: 70:b3:d5:e1:58:d9
+          vlanTagCp: 3
+          vlanTagUp: 3
+          dlPortId: [0, 1, 2, 3]
+          ulPortId: [0, 1]
+          prachPortId: [4, 5]
+  hal:
+    # Template: the init container rewrites the @(...) list to the pod's
+    # exclusive CPUs.
+    ealArgs: "--lcores (0-1)@(0-3)"
+  log:
+    allLevel: warning

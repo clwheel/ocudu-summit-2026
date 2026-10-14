@@ -1,0 +1,16 @@
+# Wires the split RAN together: the operator resolves F1-C, F1-U, E1 and N3
+# itself. It may be applied before the Du exists (Phase F): the Du's links
+# then stay Pending until the Du is created in Phase G.
+apiVersion: ran.ocudu.org/v1alpha1
+kind: RanDeployment
+metadata:
+  name: ocudu-sno2
+  namespace: ran
+spec:
+  components:
+    - kind: CuCp
+      name: ocudu-cucp
+    - kind: CuUp
+      name: ocudu-cuup
+    - kind: Du
+      name: ocudu-du

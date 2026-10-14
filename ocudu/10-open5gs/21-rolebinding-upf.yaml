@@ -1,0 +1,17 @@
+# Binds the UPF's dedicated ServiceAccount (created by the open5gs-operator
+# because the CR sets upf.serviceAccount: true) to the unprivileged UPF SCC in
+# 20-upf-scc.yaml. The SA does not exist until the CR is applied; the binding
+# can be created before it.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: open5gs-upf-scc
+  namespace: open5gs
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:open5gs-upf-unprivileged
+subjects:
+  - kind: ServiceAccount
+    name: open5gs-sample-upf
+    namespace: open5gs

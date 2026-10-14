@@ -1,0 +1,55 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: ocudu-gnb-scc
+  annotations:
+    kubernetes.io/description: >-
+      Least-privilege SCC for OCUDU RAN workload pods (Gnb/Cu/Du/CuCp/CuUp).
+      Based on restricted-v2 but allows the three Linux capabilities every
+      OCUDU RAN binary requires, even in ru_dummy/no-hardware mode: SYS_NICE
+      (thread scheduling priority), IPC_LOCK (mlock for hugepages/DPDK
+      memory), PERFMON (perf counter access for OCUDU's internal metrics).
+      No privileged mode, no anyuid, no host namespaces. CHOWN is allowed for
+      the operator's runtime-inject init container, which chowns hostPath log
+      directories as UID 0 when hostPath log persistence is configured.
+      fsGroup RunAsAny is needed so PVC-backed log volumes are writable by
+      the OCUDU process.
+allowPrivilegedContainer: false
+allowPrivilegeEscalation: true
+allowedCapabilities:
+  - SYS_NICE
+  - IPC_LOCK
+  - PERFMON
+  - CHOWN
+requiredDropCapabilities:
+  - ALL
+defaultAddCapabilities: null
+allowHostDirVolumePlugin: true
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+readOnlyRootFilesystem: false
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: MustRunAs
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+seccompProfiles:
+  - runtime/default
+volumes:
+  - configMap
+  - emptyDir
+  - hostPath
+  - projected
+  - secret
+  - downwardAPI
+  - persistentVolumeClaim
+users: []
+groups: []

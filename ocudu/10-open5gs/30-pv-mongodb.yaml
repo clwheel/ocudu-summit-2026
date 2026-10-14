@@ -1,0 +1,24 @@
+# sno2 has no StorageClass, so the MongoDB PVC that the open5gs-operator
+# creates (open5gs/open5gs-sample-mongodb) needs this pre-bound PV.
+# The node directory is created by the hub ZTP MachineConfig
+# 50-ran-hostpath-dirs (uid 999, SELinux container_file_t). type: Directory
+# makes the mount fail instead of silently creating a root-owned directory if
+# it is ever missing.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: open5gs-sample-mongodb-pv
+spec:
+  capacity:
+    storage: 8Gi
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: open5gs
+    name: open5gs-sample-mongodb
+  hostPath:
+    path: /mnt/data/open5gs-sample-mongodb
+    type: Directory

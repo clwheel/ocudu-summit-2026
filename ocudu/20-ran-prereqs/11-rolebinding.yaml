@@ -1,0 +1,15 @@
+# Lets the ocudu-ran ServiceAccount use ocudu-gnb-scc (SYS_NICE, IPC_LOCK,
+# PERFMON; no privileged mode, no host network).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ocudu-ran-scc
+  namespace: ran
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:ocudu-gnb-scc
+subjects:
+  - kind: ServiceAccount
+    name: ocudu-ran
+    namespace: ran

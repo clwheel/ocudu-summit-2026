@@ -1,0 +1,33 @@
+# Open5GS core for the sno2 E2E deployment (decision D13: PLMN 00101, TAC 7,
+# slice SST 1 / SD 0x111111). Field names follow the operator repo's e2e test
+# CR (test/e2e/e2e_cu_test.go) and docs/example.md; checked against the chart
+# 1.0.7 CRD and operator source in Phase E0 (2026-10-06). TAC "0007" follows
+# the operator's own default style ("0001").
+#
+# Apply only after the unprivileged-UPF prerequisites are in place: the SCC
+# and its RoleBinding (20-, 21-) and the kubelet sysctl allowlist (RH-2, done
+# 2026-10-06). Missing either makes UPF admission fail in a tight loop.
+apiVersion: net.gradiant.org/v1
+kind: Open5GS
+metadata:
+  name: open5gs-sample
+  namespace: open5gs
+spec:
+  # Decision C (Nils, 2026-10-06): a frozen older MongoDB instead of the
+  # operator default bitnami/mongodb:latest (9.0.2 then, moving). 8.0 was the
+  # `latest` line when open5gs-operator 1.0.7 was released (2025-07-27);
+  # 8.0.13 is its newest frozen build (digest sha256:2579e968033e…, amd64,
+  # includes mongosh, which the operator's probes use).
+  mongoDBVersion: docker.io/bitnamilegacy/mongodb:8.0.13-debian-12-r0
+  configuration:
+    mcc: "001"
+    mnc: "01"
+    tac: "0007"
+    slices:
+      - sst: "1"
+        sd: "0x1"
+  upf:
+    unprivileged: true
+    serviceAccount: true
+  webui:
+    enabled: true

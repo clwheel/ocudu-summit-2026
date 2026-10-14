@@ -1,0 +1,37 @@
+# CU-CP for the sno2 E2E deployment. Connects N2 to the Open5GS AMF in
+# namespace open5gs. The operator renders the <name>-f1c (SCTP 38472) and
+# <name>-e1 (SCTP 38462) Services; the RanDeployment wires CU-UP and DU to them.
+apiVersion: ran.ocudu.org/v1alpha1
+kind: CuCp
+metadata:
+  name: ocudu-cucp
+  namespace: ran
+spec:
+  runtime:
+    image:
+      repository: registry.gitlab.com/ocudu/ocudu/images/cu-cp
+      tag: ubuntu-24.04-avx512-20260930_cb9ca3f2-stable
+    resources:
+      # PROPOSAL (sizing not decided yet). Each OCUDU process reserves a
+      # 2 GiB buffer pool, so keep memory at 4Gi or more.
+      cpu: "2"
+      memory: 4Gi
+    serviceAccount:
+      name: ocudu-ran
+  observability:
+    logs:
+      type: none # logs go to stdout (decision D6; sno2 has no StorageClass)
+  cuCp:
+    amf:
+      addrs:
+        - open5gs-sample-amf-ngap.open5gs.svc.cluster.local
+      port: 38412
+      supportedTrackingAreas:
+        - tac: 7
+          plmnList:
+            - plmn: "00101"
+              taiSliceSupportList:
+                - sst: 1
+                  sd: 1
+  log:
+    allLevel: info

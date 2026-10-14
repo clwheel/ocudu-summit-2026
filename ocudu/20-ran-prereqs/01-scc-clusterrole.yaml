@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright (C) 2021-2026 Software Radio Systems Limited
+# SPDX-License-Identifier: BSD-3-Clause-Open-MPI
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:scc:ocudu-gnb-scc
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resourceNames:
+      - ocudu-gnb-scc
+    resources:
+      - securitycontextconstraints
+    verbs:
+      - use
